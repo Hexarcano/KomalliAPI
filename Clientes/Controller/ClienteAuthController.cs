@@ -10,15 +10,23 @@ namespace KomalliAPI.Clientes.Controller
     public class ClienteAuthController : ControllerBase
     {
         private readonly UserManager<Cliente> userManager;
+        private readonly SignInManager<Cliente> signInManager;
 
-        public ClienteAuthController(UserManager<Cliente> userManager)
+        public ClienteAuthController(UserManager<Cliente> userManager, SignInManager<Cliente> signInManager)
         {
             this.userManager = userManager;
+            this.signInManager = signInManager;
         }
 
         [HttpPost("registrar")]
         public async Task<IActionResult> Registrar(ClienteRegistro registro)
         {
+            var usuario = User.Identity;
+            if (usuario != null)
+            {
+                return BadRequest("No tienes permiso para realizar esta acción");
+            }
+
             Cliente nuevoCLiente = new Cliente()
             {
                 Nombre = registro.Nombre,
@@ -57,6 +65,40 @@ namespace KomalliAPI.Clientes.Controller
 
                 return BadRequest(textoErrores);
             }
+        }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login(ClienteLogin login)
+        {
+            var resultado = await signInManager.PasswordSignInAsync(
+                userName: login.Usuario,
+                password: login.Contrasenia,
+                isPersistent: false,
+                lockoutOnFailure: false);
+
+            if (resultado.Succeeded)
+            {
+                return Ok("Inicio de sesión completado");
+            }
+            else
+            {
+                return BadRequest("Datos incorrectos");
+            }
+        }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var usuario = User.Identity;
+
+            if (usuario == null || !usuario.IsAuthenticated)
+            {
+                return BadRequest("No tienes permiso para realizar esta acción");
+            }
+
+            await signInManager.SignOutAsync();
+
+            return Ok("Sesión Terminada con éxito");
         }
     }
 }
