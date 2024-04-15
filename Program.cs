@@ -11,6 +11,7 @@ var connectionString = builder.Configuration.GetConnectionString("TestConnection
 // Agregar context
 
 builder.Services.AddDbContext<KomalliIdentityContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<KomalliContext>(options => options.UseSqlServer(connectionString));
 
 // Agregar servicios Identity
 
@@ -32,10 +33,6 @@ builder.Services.AddSwaggerGen();
 // Construir app
 
 var app = builder.Build();
-
-// Asogmar rutas identity
-
-app.MapIdentityApi<Cliente>();
 
 // Configure the HTTP request pipeline.
 
