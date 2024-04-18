@@ -22,7 +22,7 @@ namespace KomalliAPI.Clientes.Controller
         public async Task<IActionResult> Registrar(ClienteRegistro registro)
         {
             var usuario = User.Identity;
-            if (usuario != null)
+            if (usuario != null && usuario.IsAuthenticated)
             {
                 return BadRequest("No tienes permiso para realizar esta acción");
             }
