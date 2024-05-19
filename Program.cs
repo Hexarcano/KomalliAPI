@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Agregar connectionString
 
-var connectionString = builder.Configuration.GetConnectionString("TestConnection");
+var connectionString = builder.Configuration.GetConnectionString("TestConnectionMySql");
 
 // Agregar context
 
