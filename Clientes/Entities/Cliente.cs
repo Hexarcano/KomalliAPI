@@ -6,11 +6,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace KomalliAPI.Clientes.Entities
 {
     [Index(nameof(UserName), IsUnique = true)]
-    public class Cliente : IdentityUser
+    public class Cliente : IdentityUser<Guid>
     {
         [Key]
         [Required]
-        public Guid Id { get; set; }
+        public override Guid Id { get; set; }
 
         [Required]
         [MaxLength(50)]

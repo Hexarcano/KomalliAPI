@@ -1,6 +1,6 @@
 ﻿namespace KomalliAPI.Clientes.Entities
 {
-    public enum Rol
+    public enum ERol
     {
         Cliente
     }

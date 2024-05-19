@@ -1,6 +1,6 @@
 ﻿namespace KomalliAPI.Clientes.Entities
 {
-    public class ClienteLogin
+    public class ClienteLoginRequest
     {
         public string Usuario { get; set; }
         public string Contrasenia { get; set; }
