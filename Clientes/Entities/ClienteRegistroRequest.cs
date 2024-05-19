@@ -2,7 +2,7 @@
 
 namespace KomalliAPI.Clientes.Entities
 {
-    public class ClienteRegistro
+    public class ClienteRegistroRequest
     {
         [Required]
         [MaxLength(50)]
