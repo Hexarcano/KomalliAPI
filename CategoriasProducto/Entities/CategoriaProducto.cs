@@ -14,6 +14,9 @@ namespace KomalliAPI.CategoriasProducto.Entities
         [MaxLength(40)]
         public string Nombre { get; set; }
 
+        [Required]
+        public string ImagenBase64 { get; set; }
+
         public ICollection<Producto> Productos { get; set; } = new List<Producto>();
     }
 }

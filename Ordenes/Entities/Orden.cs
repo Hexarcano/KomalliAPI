@@ -28,6 +28,6 @@ namespace KomalliAPI.Ordenes.Entities
         public string Comentario { get; set; }
 
         [Required]
-        public List<ProductoOrden> ProductosOrdenados { get; set; }
+        public List<ProductoOrden> ProductosOrdenados { get; }
     }
 }

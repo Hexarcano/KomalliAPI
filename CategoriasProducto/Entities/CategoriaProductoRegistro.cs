@@ -8,5 +8,8 @@ namespace KomalliAPI.CategoriasProducto.Entities
         [Required]
         [MaxLength(40)]
         public string Nombre { get; set; }
+
+        [Required]
+        public String ImagenBase64 { get; set; }
     }
 }

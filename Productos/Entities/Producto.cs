@@ -1,4 +1,5 @@
 ﻿using KomalliAPI.CategoriasProducto.Entities;
+using KomalliAPI.Ordenes.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -26,5 +27,8 @@ namespace KomalliAPI.Productos.Entities
 
         [Required]
         public CategoriaProducto CategoriaProducto { get; set; }
+
+        [Required]
+        public List<ProductoOrden> ProductosOrdenados { get; }
     }
 }

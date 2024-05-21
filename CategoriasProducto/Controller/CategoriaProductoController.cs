@@ -30,7 +30,8 @@ namespace KomalliAPI.CategoriasProducto.Controller
 
             CategoriaProducto nuevaCategoria = new CategoriaProducto()
             {
-                Nombre = categoriaProducto.Nombre
+                Nombre = categoriaProducto.Nombre,
+                ImagenBase64 = categoriaProducto.ImagenBase64
             };
 
             _context.Add(nuevaCategoria);
@@ -46,11 +47,30 @@ namespace KomalliAPI.CategoriasProducto.Controller
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CategoriaProductoConsulta>>> GetCategorias()
+        public async Task<ActionResult<CategoriaProductoResponse>> GetCategorias()
         {
-            var categorias = await _context.CategoriasProducto.Select(c => new { c.Id, c.Nombre } ).ToListAsync();
+            List<CategoriaProductoConsulta> categorias = await _context.CategoriasProducto.Select(c => 
+                new CategoriaProductoConsulta
+                {
+                    Id = c.Id, 
+                    Nombre = c.Nombre,
+                    ImagenBase64 = c.ImagenBase64
+                }).ToListAsync();
 
-            return Ok(categorias);
+            string mensaje = "Categorias encontradas";
+
+            if (categorias == null)
+            {
+                mensaje = "No se encontraron categorias";
+            }
+
+            CategoriaProductoResponse respuesta = new CategoriaProductoResponse()
+            {
+                Mensaje = mensaje,
+                Categorias = categorias
+            };
+
+            return Ok(respuesta);
         }
 
         [HttpGet("{id}")]
@@ -66,7 +86,8 @@ namespace KomalliAPI.CategoriasProducto.Controller
             var categoriaConsulta = new CategoriaProductoConsulta()
             {
                 Id = categoria.Id,
-                Nombre = categoria.Nombre
+                Nombre = categoria.Nombre,
+                ImagenBase64 = categoria.ImagenBase64
             };
 
             return categoriaConsulta;
@@ -80,11 +101,16 @@ namespace KomalliAPI.CategoriasProducto.Controller
                 return BadRequest("El id no coincide con la categoria");
             }
 
-            CategoriaProducto categoria = new CategoriaProducto()
+            var categoria = _context.CategoriasProducto.FirstOrDefaultAsync(c => c.Id == categoriaProducto.Id).Result;
+
+            if(categoria == null) {
+                return BadRequest("Categoria inexistente");
+            }
+
+            if(categoria.ImagenBase64 != categoriaProducto.ImagenBase64)
             {
-                Id = categoriaProducto.Id,
-                Nombre = categoriaProducto.Nombre
-            };
+                categoria.ImagenBase64 = categoriaProducto.ImagenBase64;
+            }
 
             _context.Entry(categoria).State = EntityState.Modified;
 
