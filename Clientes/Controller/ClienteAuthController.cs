@@ -1,4 +1,5 @@
 ﻿using KomalliAPI.Clientes.Entities;
+using KomalliAPI.Clientes.Utils;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -24,13 +25,13 @@ namespace KomalliAPI.Clientes.Controller
 
         private readonly UserManager<Cliente> userManager;
         private readonly SignInManager<Cliente> signInManager;
-        private readonly ITokenRevocationService tokenRevocationService;
+        private readonly ITokenService tokenService;
 
-        public ClienteAuthController(UserManager<Cliente> userManager, SignInManager<Cliente> signInManager, ITokenRevocationService tokenRevocationService)
+        public ClienteAuthController(UserManager<Cliente> userManager, SignInManager<Cliente> signInManager, ITokenService tokenService)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
-            this.tokenRevocationService = tokenRevocationService;
+            this.tokenService = tokenService;
         }
 
         [HttpPost("registrar")]
@@ -181,26 +182,24 @@ namespace KomalliAPI.Clientes.Controller
 
             string? token = HttpContext.Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last();
 
-            if (tokenRevocationService.IsTokenRevoked(token))
+            if(!Autorizador.TieneToken(token) || !Autorizador.EsTokenValido(tokenService, token))
             {
                 respuesta = PrepararRespuesta(
                     null,
                     null,
-                    "No se pudo acceder a la base de datos");
-
-                return BadRequest(respuesta);
-            }
-            else
-            {
-                tokenRevocationService.RevokeToken(token);
-
-                respuesta = PrepararRespuesta(
-                    null,
-                    null,
-                    "Sesión Terminada");
+                    "No tienes permiso para esta acción");
 
                 return Ok(respuesta);
             }
+
+            Autorizador.RevocarToken(tokenService, token);
+
+            respuesta = PrepararRespuesta(
+                null,
+                null,
+                "Sesión Terminada");
+
+            return Ok(respuesta);
         }
 
         private string GenerarToken(DatosSesion datosSesion)

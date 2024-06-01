@@ -13,11 +13,9 @@ using System.Diagnostics;
 var builder = WebApplication.CreateBuilder(args);
 
 // Agregar connectionString
-
 var connectionString = builder.Configuration.GetConnectionString("TestConnectionMySql");
 
 // Agregar context
-
 builder.Services.AddDbContext<KomalliIdentityContext>(options =>
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 23)))
 );
@@ -29,8 +27,7 @@ builder.Services.AddDbContext<KomalliContext>(options =>
 //builder.Services.AddDbContext<KomalliContext>(options => options.UseSqlServer(connectionString));
 
 // Agregar Jwt Authentication
-
-builder.Services.AddSingleton<ITokenRevocationService, TokenRevocationService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -53,30 +50,24 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Agregar servicios Identity
-
 builder.Services.AddAuthorization();
 
 // Activar API Identity
-
 builder.Services.AddIdentityApiEndpoints<Cliente>()
     .AddRoles<ClienteRol>()
     .AddEntityFrameworkStores<KomalliIdentityContext>();
 
 // Inicializar Roles
-
 using (var scope = builder.Services.BuildServiceProvider().CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ClienteRol>>();
-
     await SeedRoles(roleManager);
 }
 
 // Add services to the container.
-
 builder.Services.AddControllers();
 
 // Configurar swagger
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -86,14 +77,12 @@ builder.Services.AddSwaggerGen(options =>
         Name = "Authorization",
         Type = SecuritySchemeType.ApiKey
     });
-
     options.OperationFilter<SecurityRequirementsOperationFilter>();
 });
 
 var app = builder.Build();
 
 // Obtener el servicio de DbContext para aplicar migraciones
-
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -104,7 +93,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -112,12 +100,10 @@ if (app.Environment.IsDevelopment())
     app.MapSwagger().RequireAuthorization();
 }
 
-//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
-
 
 async Task SeedRoles(RoleManager<ClienteRol> roleManager)
 {
@@ -130,7 +116,6 @@ async Task SeedRoles(RoleManager<ClienteRol> roleManager)
             if (!await roleManager.RoleExistsAsync(rol.ToString()))
             {
                 var nuevoRol = new ClienteRol(rol.ToString());
-
                 await roleManager.CreateAsync(nuevoRol);
             }
         }

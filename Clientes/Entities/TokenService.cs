@@ -2,7 +2,7 @@
 
 namespace KomalliAPI.Clientes.Entities
 {
-    public class TokenRevocationService : ITokenRevocationService
+    public class TokenService : ITokenService
     {
         //Simlumación de revocado de tokens.
         //No lo guarda en disco, solo en memoria
