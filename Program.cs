@@ -54,13 +54,13 @@ builder.Services.AddAuthorization();
 
 // Activar API Identity
 builder.Services.AddIdentityApiEndpoints<Cliente>()
-    .AddRoles<ClienteRol>()
+    .AddRoles<IdentityRole<Guid>>()
     .AddEntityFrameworkStores<KomalliIdentityContext>();
 
 // Inicializar Roles
 using (var scope = builder.Services.BuildServiceProvider().CreateScope())
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ClienteRol>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
     await SeedRoles(roleManager);
 }
 
@@ -105,7 +105,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.Run();
 
-async Task SeedRoles(RoleManager<ClienteRol> roleManager)
+async Task SeedRoles(RoleManager<IdentityRole<Guid>> roleManager)
 {
     var roles = Enum.GetValues(typeof(ERol));
 
@@ -113,9 +113,9 @@ async Task SeedRoles(RoleManager<ClienteRol> roleManager)
     {
         try
         {
-            if (!await roleManager.RoleExistsAsync(rol.ToString()))
+            if (!await roleManager.RoleExistsAsync(rol.ToString()!))
             {
-                var nuevoRol = new ClienteRol(rol.ToString());
+                var nuevoRol = new IdentityRole<Guid>(rol.ToString()!);
                 await roleManager.CreateAsync(nuevoRol);
             }
         }

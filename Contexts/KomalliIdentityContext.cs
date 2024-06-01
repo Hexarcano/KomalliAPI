@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KomalliAPI.Contexts
 {
-    public class KomalliIdentityContext : IdentityDbContext<Cliente, ClienteRol, Guid>
+    public class KomalliIdentityContext : IdentityDbContext<Cliente, IdentityRole<Guid>, Guid>
     {
         public KomalliIdentityContext(DbContextOptions<KomalliIdentityContext> options) : base(options) { }
     }
