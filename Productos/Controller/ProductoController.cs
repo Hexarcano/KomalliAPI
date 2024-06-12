@@ -10,9 +10,11 @@ using KomalliAPI.Productos.Entities;
 using KomalliAPI.Clientes.Entities;
 using KomalliAPI.Clientes.Utils;
 using NuGet.Common;
+using Microsoft.AspNetCore.Authorization;
 
 namespace KomalliAPI.Productos
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ProductoController : ControllerBase
@@ -49,7 +51,7 @@ namespace KomalliAPI.Productos
                 Id = c.Id,
                 Nombre = c.Nombre,
                 Precio = c.Precio,
-                Descuento = c.Descuento,
+                PorcentajeDescuento = c.PorcentajeDescuento,
                 CategoriaProductoId = c.CategoriaProductoId
             }).ToListAsync();
 
@@ -98,7 +100,7 @@ namespace KomalliAPI.Productos
                     Id = consulta.Id,
                     Nombre = consulta.Nombre,
                     Precio = consulta.Precio,
-                    Descuento = consulta.Descuento,
+                    PorcentajeDescuento = consulta.PorcentajeDescuento,
                     CategoriaProductoId = consulta.CategoriaProductoId
                 }
             };
@@ -135,7 +137,7 @@ namespace KomalliAPI.Productos
                     Id = c.Id,
                     Nombre = c.Nombre,
                     Precio = c.Precio,
-                    Descuento = c.Descuento,
+                    PorcentajeDescuento = c.PorcentajeDescuento,
                     CategoriaProductoId = c.CategoriaProductoId
                 })
                 .ToListAsync();
@@ -157,6 +159,20 @@ namespace KomalliAPI.Productos
         [HttpPut("{id}")]
         public async Task<IActionResult> PutProducto(int id, ProductoConsulta productoConsulta)
         {
+            string? token = HttpContext.Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last();
+            string mensaje = "Productos encontrados";
+
+            if (!Autorizador.TieneToken(token) || !Autorizador.EsTokenValido(_tokenService, token))
+            {
+                mensaje = "No tienes permiso para hacer esta acción";
+
+                return BadRequest(new ProductoResponse()
+                {
+                    Mensaje = mensaje,
+                    Productos = null
+                });
+            }
+
             if (id != productoConsulta.Id)
             {
                 return BadRequest();
@@ -167,7 +183,7 @@ namespace KomalliAPI.Productos
                 Id = productoConsulta.Id,
                 Nombre = productoConsulta.Nombre,
                 Precio = productoConsulta.Precio,
-                Descuento = productoConsulta.Descuento,
+                PorcentajeDescuento = productoConsulta.PorcentajeDescuento,
                 CategoriaProductoId = productoConsulta.CategoriaProductoId
             };
 
@@ -195,13 +211,27 @@ namespace KomalliAPI.Productos
         // POST: api/Productos
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Producto>> PostProducto(ProductoRegistro producto)
+        public async Task<ActionResult<ProductoResponse>> PostProducto(ProductoRegistro producto)
         {
+            string? token = HttpContext.Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last();
+            string mensaje = "Producto encontrado";
+
+            if (!Autorizador.TieneToken(token) || !Autorizador.EsTokenValido(_tokenService, token))
+            {
+                mensaje = "No tienes permiso para hacer esta acción";
+
+                return BadRequest(new ProductoResponse()
+                {
+                    Mensaje = mensaje,
+                    Productos = null
+                });
+            }
+
             Producto nuevoProducto = new Producto()
             {
                 Nombre = producto.Nombre,
                 Precio = producto.Precio,
-                Descuento = producto.Descuento,
+                PorcentajeDescuento = producto.PorcentajeDescuento,
                 CategoriaProductoId = producto.CategoriaProductoId
             };
 
@@ -211,10 +241,33 @@ namespace KomalliAPI.Productos
 
             if (resultado < 1)
             {
-                return BadRequest("Verificar datos de producto");
+                mensaje = "No existe producto de esa categoría";
+
+                return BadRequest(new ProductoResponse()
+                {
+                    Mensaje = mensaje,
+                    Productos = null
+                });
             }
 
-            return Ok("Producto creado con éxito");
+            mensaje = "Producto agregado";
+
+            List<ProductoConsulta> productos = new List<ProductoConsulta>();
+
+            productos.Add(new ProductoConsulta()
+            {
+                Id = nuevoProducto.Id,
+                Nombre = nuevoProducto.Nombre,
+                Precio = nuevoProducto.Precio,
+                PorcentajeDescuento = nuevoProducto.PorcentajeDescuento,
+                CategoriaProductoId = nuevoProducto.CategoriaProductoId
+            });
+
+            return Ok(new ProductoResponse()
+            {
+                Mensaje = mensaje,
+                Productos = productos
+            });
         }
 
         // DELETE: api/Productos/5

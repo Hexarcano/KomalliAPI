@@ -14,7 +14,7 @@ namespace KomalliAPI.Productos.Entities
         public double Precio { get; set; }
 
         [Required]
-        public int Descuento { get; set; }
+        public int PorcentajeDescuento { get; set; }
 
         [Required]
         public int CategoriaProductoId { get; set; }

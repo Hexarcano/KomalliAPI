@@ -8,7 +8,7 @@ namespace KomalliAPI.Productos.Entities
         public int Id { get; set; }
         public string Nombre { get; set; }
         public double Precio { get; set; }
-        public int Descuento { get; set; }
+        public int PorcentajeDescuento { get; set; }
         public int CategoriaProductoId { get; set; }
     }
 }
