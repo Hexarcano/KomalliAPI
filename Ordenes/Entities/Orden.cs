@@ -14,6 +14,9 @@ namespace KomalliAPI.Ordenes.Entities
         public Guid ClienteId { get; set; }
 
         [Required]
+        public string NombreCliente { get; set; }
+
+        [Required]
         [Precision(2)]
         public double PrecioTotal { get; set; }
 

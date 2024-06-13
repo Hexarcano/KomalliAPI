@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace KomalliAPI.CategoriasProducto.Controller
 {
@@ -111,6 +112,10 @@ namespace KomalliAPI.CategoriasProducto.Controller
                     ImagenBase64 = c.ImagenBase64
                 }).ToListAsync();
 
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
             if (categorias == null)
             {
                 mensaje = "No se encontraron categorias";
@@ -142,7 +147,12 @@ namespace KomalliAPI.CategoriasProducto.Controller
                 });
             }
 
-            var categoria = await _context.CategoriasProducto.FindAsync(id);
+            var categoria = await _context.CategoriasProducto
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
 
             if (categoria == null)
             {
@@ -175,19 +185,47 @@ namespace KomalliAPI.CategoriasProducto.Controller
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCategoria(int id, CategoriaProductoConsulta categoriaProducto)
+        public async Task<ActionResult<CategoriaProductoResponse>> PutCategoria(int id, CategoriaProductoConsulta categoriaProducto)
         {
+            string? token = HttpContext.Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last();
+            string mensaje = "Categorias encontradas";
+
+            if (!Autorizador.TieneToken(token) || !Autorizador.EsTokenValido(_tokenService, token))
+            {
+                mensaje = "No tienes permiso para hacer esta acción";
+
+                return BadRequest(new CategoriaProductoResponse()
+                {
+                    Mensaje = mensaje,
+                    Categorias = null
+                });
+            }
+
             if (id != categoriaProducto.Id)
             {
-                return BadRequest("El id no coincide con la categoria");
+                mensaje = "El id no coincide con la categoria";
+
+                return BadRequest(new CategoriaProductoResponse()
+                {
+                    Mensaje = mensaje,
+                    Categorias = null
+                });
             }
 
             var categoria = _context.CategoriasProducto.FirstOrDefaultAsync(c => c.Id == categoriaProducto.Id).Result;
 
             if (categoria == null)
             {
-                return BadRequest("Categoria inexistente");
+                mensaje = "El id no coincide con la categoria";
+
+                return BadRequest(new CategoriaProductoResponse()
+                {
+                    Mensaje = mensaje,
+                    Categorias = null
+                });
             }
+
+            categoria.Nombre = categoriaProducto.Nombre;
 
             if (categoria.ImagenBase64 != categoriaProducto.ImagenBase64)
             {
@@ -199,20 +237,32 @@ namespace KomalliAPI.CategoriasProducto.Controller
             try
             {
                 await _context.SaveChangesAsync();
+
+                mensaje = "Categoría actualizada";
+
+                return Ok(new CategoriaProductoResponse()
+                {
+                    Mensaje = mensaje,
+                    Categorias = null
+                });
             }
             catch (DbUpdateConcurrencyException ex)
             {
                 if (!CategoriaExists(id))
                 {
-                    return NotFound();
+                    mensaje = "Error de conexión con la base de datos";
+
+                    return NotFound(new CategoriaProductoResponse()
+                    {
+                        Mensaje = mensaje,
+                        Categorias = null
+                    });
                 }
                 else
                 {
                     throw;
                 }
             }
-
-            return NoContent();
         }
 
         [HttpDelete("{id}")]

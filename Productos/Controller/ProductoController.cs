@@ -175,7 +175,13 @@ namespace KomalliAPI.Productos
 
             if (id != productoConsulta.Id)
             {
-                return BadRequest();
+                mensaje = "El id no coincide con el producto";
+
+                return BadRequest(new ProductoResponse()
+                {
+                    Mensaje = mensaje,
+                    Productos = null
+                });
             }
 
             Producto producto = new Producto()
