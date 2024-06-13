@@ -79,7 +79,8 @@ namespace KomalliAPI.Ordenes.Controller
                     Ordenes = ordenes,
                     Productos = null
                 });
-            } else
+            }
+            else
             {
                 mensaje = "Ordenes no encontradas";
 
@@ -92,7 +93,7 @@ namespace KomalliAPI.Ordenes.Controller
 
                 return Ok(resultado);
             }
-            
+
         }
 
         // GET: api/Orden/5
@@ -134,6 +135,7 @@ namespace KomalliAPI.Ordenes.Controller
                 {
                     Id = orden.Id,
                     ClienteId = orden.ClienteId,
+                    NombreCliente = orden.NombreCliente,
                     PrecioTotal = orden.PrecioTotal,
                     FechaExpedicion = orden.FechaExpedicion,
                     FechaPago = orden.FechaPago,
@@ -142,9 +144,13 @@ namespace KomalliAPI.Ordenes.Controller
                 }
             };
 
+            List<ProductoOrden> productosOrden = await _context.ProductosOrden
+                .Where(po => po.OrdenId == orden.Id)
+                .ToListAsync();
+
             List<ProductoOrdenConsulta> productos = new List<ProductoOrdenConsulta>();
 
-            foreach (var item in orden.ProductosOrdenados)
+            foreach (var item in productosOrden)
             {
 
                 productos.Add(new ProductoOrdenConsulta()
@@ -171,18 +177,79 @@ namespace KomalliAPI.Ordenes.Controller
         // PUT: api/Orden/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutOrden(Guid id, Orden orden)
+        public async Task<ActionResult<OrdenResponse>> PutOrden(Guid id, OrdenRegistro ordenNueva)
         {
-            if (id != orden.Id)
+            string? token = HttpContext.Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last();
+            string mensaje = "";
+
+            if (!Autorizador.TieneToken(token) || !Autorizador.EsTokenValido(_tokenService, token))
             {
-                return BadRequest();
+                mensaje = "No tienes permiso para hacer esta acción";
+
+                return BadRequest(new OrdenResponse()
+                {
+                    Mensaje = mensaje,
+                    Ordenes = null,
+                    Productos = null
+                });
             }
 
-            _context.Entry(orden).State = EntityState.Modified;
+            if (id != ordenNueva.Id)
+            {
+                mensaje = "El id no coincide con la orden";
+
+                return BadRequest(new OrdenResponse()
+                {
+                    Mensaje = mensaje,
+                    Ordenes = null,
+                    Productos = null
+                });
+            }
+
+            var ordenExistente = await _context.Ordenes.Include(o => o.ProductosOrdenados).FirstOrDefaultAsync(o => o.Id == id);
+
+            if (ordenExistente == null)
+            {
+                return NotFound(new OrdenResponse()
+                {
+                    Mensaje = "Orden no encontrada",
+                    Ordenes = null,
+                    Productos = null
+                });
+            }
+
+            ordenExistente.NombreCliente = ordenNueva.NombreCliente;
+            ordenExistente.PrecioTotal = ordenNueva.PrecioTotal;
+            ordenExistente.Pagado = ordenNueva.Pagado;
+            ordenExistente.Comentario = ordenNueva.Comentario;
+            ordenExistente.FechaExpedicion = DateTime.Now;
+            ordenExistente.FechaPago = ordenNueva.Pagado ? DateTime.Now : (DateTime?)null;
+
+            var productosAnteriores = ordenExistente.ProductosOrdenados.ToList();
+            var productosNuevos = ordenNueva.Productos;
+
+            foreach (var item in productosAnteriores)
+            {
+                if (!productosNuevos.Any(p => p.ProductoId == item.ProductoId))
+                {
+                    _context.ProductosOrden.Remove(item);
+                }
+            }
+
+            _context.Entry(ordenExistente).State = EntityState.Modified;
 
             try
             {
                 await _context.SaveChangesAsync();
+
+                mensaje = "Orden actualizada";
+
+                return Ok(new OrdenResponse()
+                {
+                    Mensaje = mensaje,
+                    Ordenes = null,
+                    Productos = null
+                });
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -202,7 +269,7 @@ namespace KomalliAPI.Ordenes.Controller
         // POST: api/Orden
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Orden>> PostOrden(OrdenRegistro ordenRegistro)
+        public async Task<ActionResult<OrdenResponse>> PostOrden(OrdenRegistro ordenRegistro)
         {
             string? token = HttpContext.Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last();
             string mensaje = "";
@@ -223,65 +290,74 @@ namespace KomalliAPI.Ordenes.Controller
             {
                 try
                 {
-                    Orden orden = new Orden()
+                    Orden orden = new Orden();
+
+                    if (ordenRegistro.Pagado)
                     {
-                        ClienteId = ordenRegistro.ClienteId,
-                        PrecioTotal = ordenRegistro.PrecioTotal,
-                        Pagado = false,
-                        FechaExpedicion = DateTime.Now,
-                        FechaPago = null,
-                        Comentario = ordenRegistro.Comentario
-                    };
-
-                    _context.Ordenes.Add(orden);
-
-                    var ordenCreada = await _context.SaveChangesAsync();
-
-                    if (ordenCreada > 0)
-                    {
-                        List<ProductoOrdenRegistro> productos = ordenRegistro.Productos;
-
-                        double subtotal = 0;
-
-                        foreach (var producto in productos)
-                        {
-                            subtotal = producto.PrecioUnitario * producto.Cantidad;
-
-                            if (subtotal == producto.SubtotalProductos)
-                            {
-                                _context.ProductosOrden.Add(new ProductoOrden()
-                                {
-                                    ProductoId = producto.ProductoId,
-                                    PrecioUnitario = producto.PrecioUnitario,
-                                    Cantidad = producto.Cantidad,
-                                    SubtotalProductos = subtotal
-                                });
-
-                                await _context.SaveChangesAsync();
-
-                                return Ok(new OrdenResponse()
-                                {
-                                    Mensaje = ""
-                                });
-                            }
-                            else
-                            {
-                                return BadRequest();
-                            }
-                        }
-
-                        return CreatedAtAction("GetOrden", new { id = orden.Id }, orden);
+                        orden.NombreCliente = ordenRegistro.NombreCliente;
+                        orden.PrecioTotal = ordenRegistro.PrecioTotal;
+                        orden.Pagado = ordenRegistro.Pagado;
+                        orden.FechaExpedicion = DateTime.Now;
+                        orden.FechaPago = DateTime.Now;
+                        orden.Comentario = ordenRegistro.Comentario;
                     }
                     else
                     {
-                        return BadRequest();
+                        orden.NombreCliente = ordenRegistro.NombreCliente;
+                        orden.PrecioTotal = ordenRegistro.PrecioTotal;
+                        orden.Pagado = false;
+                        orden.FechaExpedicion = DateTime.Now;
+                        orden.FechaPago = null;
+                        orden.Comentario = ordenRegistro.Comentario;
                     }
+
+                    _context.Ordenes.Add(orden);
+
+                    await _context.SaveChangesAsync();
+
+                    List<ProductoOrdenRegistro> productos = ordenRegistro.Productos;
+
+                    double subtotal = 0;
+
+                    foreach (var producto in productos)
+                    {
+                        subtotal = producto.Cantidad * producto.PrecioUnitario;
+
+                        _context.ProductosOrden.Add(new ProductoOrden()
+                        {
+                            OrdenId = orden.Id,
+                            ProductoId = producto.ProductoId,
+                            PrecioUnitario = producto.PrecioUnitario,
+                            Cantidad = producto.Cantidad,
+                            SubtotalProductos = subtotal
+                        });
+
+                        await _context.SaveChangesAsync();
+                    }
+
+                    transaction.Commit();
+
+                    mensaje = "Orden creada con éxito";
+
+                    return Ok(new OrdenResponse()
+                    {
+                        Mensaje = mensaje,
+                        Ordenes = null,
+                        Productos = null
+                    });
                 }
                 catch (DbUpdateConcurrencyException)
                 {
                     transaction.Rollback();
 
-                    return BadRequest();
+                    mensaje = "Error de conexión con la base de datos";
+
+                    return BadRequest(new OrdenResponse()
+                    {
+                        Mensaje = "",
+                        Ordenes = null,
+                        Productos = null
+                    });
                 }
             }
         }
@@ -290,6 +366,21 @@ namespace KomalliAPI.Ordenes.Controller
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrden(Guid id)
         {
+            string? token = HttpContext.Request.Headers.Authorization.FirstOrDefault()?.Split(" ").Last();
+            string mensaje = "";
+
+            if (!Autorizador.TieneToken(token) || !Autorizador.EsTokenValido(_tokenService, token))
+            {
+                mensaje = "No tienes permiso para hacer esta acción";
+
+                return BadRequest(new OrdenResponse()
+                {
+                    Mensaje = mensaje,
+                    Ordenes = null,
+                    Productos = null
+                });
+            }
+
             var orden = await _context.Ordenes.FindAsync(id);
             if (orden == null)
             {
@@ -299,7 +390,14 @@ namespace KomalliAPI.Ordenes.Controller
             _context.Ordenes.Remove(orden);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            mensaje = "Orden eliminada con éxito";
+
+            return Ok(new OrdenResponse()
+            {
+                Mensaje = mensaje,
+                Ordenes = null,
+                Productos = null
+            });
         }
 
         private bool OrdenExists(Guid id)
